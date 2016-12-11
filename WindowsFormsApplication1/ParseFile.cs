@@ -24,6 +24,8 @@ namespace Straetusshockomatconverter
 
         private Dictionary<string, string> _conversionTable;
 
+        private Dictionary<int, int> SerialNumCount;
+
         public void SingleParse(List<string> originUrl, List<string> targetUrl, Dictionary<string, string> configDictionary, string dateText, bool dateFilterCheckbox)
         {
             if (!DateTimeParse(dateText, dateFilterCheckbox))
@@ -33,7 +35,7 @@ namespace Straetusshockomatconverter
             }
 
             _conversionTable = configDictionary;
-            
+
             for (var i = 0; i < originUrl.Count; i++)
             {
                 if (!InitRead(originUrl[i], targetUrl[i]))
@@ -46,6 +48,17 @@ namespace Straetusshockomatconverter
                 {
                     Parse();
                 }
+
+                var duplicateSerialNumberDictionary = SerialNumCount.Where(x => x.Value > 1).Select(x => x.Key).ToList();
+
+                if (duplicateSerialNumberDictionary.Count > 0)
+                {
+                    var badKeys = string.Join(", ", duplicateSerialNumberDictionary);
+                    var message = $"There are duplicate serial numbers in the file: {badKeys}";
+                    MessageBox.Show(message);
+                    return;
+                }
+
                 InitWrite(targetUrl[i]);
                 FileStream fileStream = new FileStream(targetUrl[i], FileMode.CreateNew);
                 using (_writer = new StreamWriter(fileStream, Encoding.GetEncoding("windows-1255")))
@@ -101,12 +114,13 @@ namespace Straetusshockomatconverter
                 return false;
 
             newFileData = new List<string>();
-            
+
             return true;
         }
 
         private void Parse()
         {
+            SerialNumCount = new Dictionary<int, int>();
             string line;
             while ((line = _reader.ReadLine()) != null)
             {
@@ -116,6 +130,22 @@ namespace Straetusshockomatconverter
                     parts.Add(LineSplitter(line).ElementAt(i));
                 }
 
+                if (parts[15] != null && parts[15] != string.Empty)
+                {
+                    int serialNum;
+                    var isNum = int.TryParse(parts[15], out serialNum);
+                    if (isNum)
+                    {
+                        if (!SerialNumCount.ContainsKey(serialNum))
+                        {
+                            SerialNumCount.Add(serialNum, 1);
+                        }
+                        else
+                        {
+                            SerialNumCount[serialNum]++;
+                        }
+                    }
+                }
                 DateTime currentLinesDate;
                 var successfullParse = DateTime.TryParse(parts[19], out currentLinesDate);
                 if (successfullParse && currentLinesDate < _date) continue;
