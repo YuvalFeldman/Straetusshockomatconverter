@@ -67,7 +67,7 @@ namespace Straetusshockomatconverter
                 return;
             }
 
-            _parser.SingleParse(_originUrl, _targetUrl, _configDictionary);
+            _parser.SingleParse(_originUrl, _targetUrl, _configDictionary, dateTextBox.Text, dateFilterBox.Checked);
         }
 
         private void Save_Click(object sender, EventArgs e)
@@ -115,13 +115,14 @@ namespace Straetusshockomatconverter
                 _targetUrl.Add(path);
             }
 
-            _parser.SingleParse(_originUrl, _targetUrl, _configDictionary);
+            _parser.SingleParse(_originUrl, _targetUrl, _configDictionary, dateTextBox.Text, dateFilterBox.Checked);
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
             if (_openFileDialog.ShowDialog() != DialogResult.OK) return;
 
+            _configDictionary = new Dictionary<string, string>();
             var _reader = new StreamReader(_openFileDialog.FileName);
             using (_reader = new StreamReader(_openFileDialog.FileName, Encoding.GetEncoding("windows-1255")))
             {

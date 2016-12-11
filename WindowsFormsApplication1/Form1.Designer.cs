@@ -31,6 +31,8 @@
             this.Select = new System.Windows.Forms.Button();
             this.Save = new System.Windows.Forms.Button();
             this.button1 = new System.Windows.Forms.Button();
+            this.dateFilterBox = new System.Windows.Forms.CheckBox();
+            this.dateTextBox = new System.Windows.Forms.TextBox();
             this.SuspendLayout();
             // 
             // Select
@@ -63,17 +65,37 @@
             this.button1.UseVisualStyleBackColor = true;
             this.button1.Click += new System.EventHandler(this.button1_Click);
             // 
+            // dateFilterBox
+            // 
+            this.dateFilterBox.AutoSize = true;
+            this.dateFilterBox.Location = new System.Drawing.Point(12, 55);
+            this.dateFilterBox.Name = "dateFilterBox";
+            this.dateFilterBox.Size = new System.Drawing.Size(89, 17);
+            this.dateFilterBox.TabIndex = 3;
+            this.dateFilterBox.Text = "Filter by date:";
+            this.dateFilterBox.UseVisualStyleBackColor = true;
+            // 
+            // dateTextBox
+            // 
+            this.dateTextBox.Location = new System.Drawing.Point(107, 53);
+            this.dateTextBox.Name = "dateTextBox";
+            this.dateTextBox.Size = new System.Drawing.Size(221, 20);
+            this.dateTextBox.TabIndex = 4;
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(496, 45);
+            this.ClientSize = new System.Drawing.Size(496, 84);
+            this.Controls.Add(this.dateTextBox);
+            this.Controls.Add(this.dateFilterBox);
             this.Controls.Add(this.button1);
             this.Controls.Add(this.Save);
             this.Controls.Add(this.Select);
             this.Name = "Form1";
             this.Text = "Straetus shockomat converter";
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
@@ -82,6 +104,8 @@
         private System.Windows.Forms.Button Select;
         private System.Windows.Forms.Button Save;
         private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.CheckBox dateFilterBox;
+        private System.Windows.Forms.TextBox dateTextBox;
     }
 }
 

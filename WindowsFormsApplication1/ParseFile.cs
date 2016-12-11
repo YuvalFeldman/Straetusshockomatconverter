@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -17,12 +18,22 @@ namespace Straetusshockomatconverter
 
         private TextFieldParser _csvParser;
 
+        private DateTime _date;
+
+        private bool _filterByDateTime;
 
         private Dictionary<string, string> _conversionTable;
 
-        public void SingleParse(List<string> originUrl, List<string> targetUrl, Dictionary<string, string> configDictionary)
+        public void SingleParse(List<string> originUrl, List<string> targetUrl, Dictionary<string, string> configDictionary, string dateText, bool dateFilterCheckbox)
         {
+            if (!DateTimeParse(dateText, dateFilterCheckbox))
+            {
+                MessageBox.Show(@"The date you have entered is an invalid date.");
+                return;
+            }
+
             _conversionTable = configDictionary;
+            
             for (var i = 0; i < originUrl.Count; i++)
             {
                 if (!InitRead(originUrl[i], targetUrl[i]))
@@ -45,6 +56,31 @@ namespace Straetusshockomatconverter
                 Quit();
             }
             MessageBox.Show("done");
+        }
+
+        private bool DateTimeParse(string dateText, bool dateFilterCheckbox)
+        {
+            bool success;
+
+            if (!dateFilterCheckbox)
+            {
+                _date = DateTime.MinValue;
+                success = true;
+            }
+            else
+            {
+                try
+                {
+                    _date = DateTime.ParseExact(dateText, "dd.MM.yyyy", CultureInfo.InvariantCulture);
+                    success = true;
+                }
+                catch (Exception)
+                {
+                    success = false;
+                }
+            }
+
+            return success;
         }
 
         private void InitWrite(string targetUrl)
@@ -75,15 +111,19 @@ namespace Straetusshockomatconverter
             while ((line = _reader.ReadLine()) != null)
             {
                 var parts = new List<string>();
-                for (int i = 0; i < 19; i++)
+                for (int i = 0; i < 20; i++)
                 {
                     parts.Add(LineSplitter(line).ElementAt(i));
                 }
 
-                var temp = parts[14].Trim();
-                if (_conversionTable.ContainsKey(temp))
+                DateTime currentLinesDate;
+                var successfullParse = DateTime.TryParse(parts[19], out currentLinesDate);
+                if (successfullParse && currentLinesDate < _date) continue;
+
+                var unconvertedValue = parts[14].Trim();
+                if (_conversionTable.ContainsKey(unconvertedValue))
                 {
-                    parts[14] = _conversionTable[temp];
+                    parts[14] = _conversionTable[unconvertedValue];
                 }
 
                 newFileData.Add(string.Join(",", parts));
@@ -92,16 +132,21 @@ namespace Straetusshockomatconverter
 
         IEnumerable<string> LineSplitter(string line)
         {
-            int fieldStart = 0;
-            for (int i = 0; i < line.Length; i++)
+            var fieldStart = 0;
+            for (var i = 0; i < line.Length; i++)
             {
                 if (line[i] == ',')
                 {
                     yield return line.Substring(fieldStart, i - fieldStart);
                     fieldStart = i + 1;
                 }
-                if (line[i] == '"')
-                    for (i++; line[i] != '"'; i++) { }
+                if (i == line.Length - 1)
+                {
+                    yield return line.Substring(fieldStart, i - fieldStart + 1);
+                }
+                if (line[i] != '"') continue;
+
+                for (i++; line[i] != '"'; i++) { }
             }
         }
 
