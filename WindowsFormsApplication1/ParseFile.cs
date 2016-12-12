@@ -26,6 +26,9 @@ namespace Straetusshockomatconverter
 
         private Dictionary<int, int> SerialNumCount;
 
+        private int numberOfZeroSerialsDeleted;
+        private int numberOfCityNamesUpdated;
+
         public void SingleParse(List<string> originUrl, List<string> targetUrl, Dictionary<string, string> configDictionary, string dateText, bool dateFilterCheckbox)
         {
             if (!DateTimeParse(dateText, dateFilterCheckbox))
@@ -68,7 +71,7 @@ namespace Straetusshockomatconverter
 
                 Quit();
             }
-            MessageBox.Show("done");
+            MessageBox.Show($"done \r\n Number of city names changed: {numberOfCityNamesUpdated} \r\n Number of rows with zero deleted: {numberOfZeroSerialsDeleted} \r\n");
         }
 
         private bool DateTimeParse(string dateText, bool dateFilterCheckbox)
@@ -120,12 +123,14 @@ namespace Straetusshockomatconverter
 
         private void Parse()
         {
+            numberOfZeroSerialsDeleted = 0;
+            numberOfCityNamesUpdated = 0;
             SerialNumCount = new Dictionary<int, int>();
             string line;
             while ((line = _reader.ReadLine()) != null)
             {
                 var parts = new List<string>();
-                for (int i = 0; i < 20; i++)
+                for (var i = 0; i < 20; i++)
                 {
                     parts.Add(LineSplitter(line).ElementAt(i));
                 }
@@ -136,6 +141,11 @@ namespace Straetusshockomatconverter
                     var isNum = int.TryParse(parts[15], out serialNum);
                     if (isNum)
                     {
+                        if (serialNum == 0)
+                        {
+                            numberOfZeroSerialsDeleted++;
+                            continue;
+                        }
                         if (!SerialNumCount.ContainsKey(serialNum))
                         {
                             SerialNumCount.Add(serialNum, 1);
@@ -145,6 +155,11 @@ namespace Straetusshockomatconverter
                             SerialNumCount[serialNum]++;
                         }
                     }
+                }
+                if (parts[8] == null || parts[8] == string.Empty)
+                {
+                    numberOfCityNamesUpdated++;
+                    parts[8] = "מען";
                 }
                 DateTime currentLinesDate;
                 var successfullParse = DateTime.TryParse(parts[19], out currentLinesDate);
