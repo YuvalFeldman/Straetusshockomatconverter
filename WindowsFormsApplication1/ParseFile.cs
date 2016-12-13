@@ -135,27 +135,32 @@ namespace Straetusshockomatconverter
                     parts.Add(LineSplitter(line).ElementAt(i));
                 }
 
-                if (parts[15] != null && parts[15] != string.Empty)
+                if (parts[15] == null || parts[15] == string.Empty)
                 {
-                    int serialNum;
-                    var isNum = int.TryParse(parts[15], out serialNum);
-                    if (isNum)
+                    numberOfZeroSerialsDeleted++;
+                    continue;
+                }
+
+                int serialNum;
+                var isNum = int.TryParse(parts[15], out serialNum);
+
+                if (isNum)
+                {
+                    if (serialNum == 0)
                     {
-                        if (serialNum == 0)
-                        {
-                            numberOfZeroSerialsDeleted++;
-                            continue;
-                        }
-                        if (!SerialNumCount.ContainsKey(serialNum))
-                        {
-                            SerialNumCount.Add(serialNum, 1);
-                        }
-                        else
-                        {
-                            SerialNumCount[serialNum]++;
-                        }
+                        numberOfZeroSerialsDeleted++;
+                        continue;
+                    }
+                    if (!SerialNumCount.ContainsKey(serialNum))
+                    {
+                        SerialNumCount.Add(serialNum, 1);
+                    }
+                    else
+                    {
+                        SerialNumCount[serialNum]++;
                     }
                 }
+
                 if (parts[8] == null || parts[8] == string.Empty)
                 {
                     numberOfCityNamesUpdated++;
