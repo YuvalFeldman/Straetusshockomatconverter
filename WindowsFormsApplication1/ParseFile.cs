@@ -15,6 +15,7 @@ namespace Straetusshockomatconverter
         private StreamWriter _writer;
 
         private List<string> newFileData;
+        private List<string> newFileDataDuplicates;
 
         private TextFieldParser _csvParser;
 
@@ -24,7 +25,7 @@ namespace Straetusshockomatconverter
 
         private Dictionary<string, string> _conversionTable;
 
-        private Dictionary<int, int> SerialNumCount;
+        private Dictionary<int, List<string>> LineDictionary;
 
         private int numberOfZeroSerialsDeleted;
         private int numberOfCityNamesUpdated;
@@ -52,26 +53,33 @@ namespace Straetusshockomatconverter
                     Parse();
                 }
 
-                var duplicateSerialNumberDictionary = SerialNumCount.Where(x => x.Value > 1).Select(x => x.Key).ToList();
-
-                if (duplicateSerialNumberDictionary.Count > 0)
-                {
-                    var badKeys = string.Join(", ", duplicateSerialNumberDictionary);
-                    var message = $"There are duplicate serial numbers in the file: {badKeys}";
-                    MessageBox.Show(message);
-                    return;
-                }
+                SeperateFileDictionaryToLists();
 
                 InitWrite(targetUrl[i]);
                 FileStream fileStream = new FileStream(targetUrl[i], FileMode.CreateNew);
                 using (_writer = new StreamWriter(fileStream, Encoding.GetEncoding("windows-1255")))
                 {
-                    writeToFile();
+                    WriteToFile(newFileData);
+                }
+                if (newFileDataDuplicates.Count > 0)
+                {
+                    var duplicatesFileName = targetUrl[i].Replace(".csv", "_Duplicate.csv");
+                    fileStream = new FileStream(duplicatesFileName, FileMode.CreateNew);
+                    using (_writer = new StreamWriter(fileStream, Encoding.GetEncoding("windows-1255")))
+                    {
+                        WriteToFile(newFileDataDuplicates);
+                    }
                 }
 
                 Quit();
             }
-            MessageBox.Show($"done \r\n Number of city names changed: {numberOfCityNamesUpdated} \r\n Number of rows with zero deleted: {numberOfZeroSerialsDeleted} \r\n");
+
+            var duplicates = newFileDataDuplicates.Count > 0 ? "\r\n Duplicates where found, Duplicates file was created." : string.Empty;
+
+            MessageBox.Show(
+                String.Format(
+                    "done {0} \r\n Number of city names changed: {1} \r\n Number of rows with zero or no serial deleted: {2} \r\n",
+                    duplicates, numberOfCityNamesUpdated, numberOfZeroSerialsDeleted));
         }
 
         private bool DateTimeParse(string dateText, bool dateFilterCheckbox)
@@ -101,14 +109,9 @@ namespace Straetusshockomatconverter
 
         private void InitWrite(string targetUrl)
         {
-            if (targetUrl == null)
-            {
-                return;
-            }
-            if (File.Exists(targetUrl))
-            {
-                File.Delete(targetUrl);
-            }
+            if (targetUrl == null) return;
+            if (File.Exists(targetUrl)) File.Delete(targetUrl);
+            if (File.Exists(targetUrl + "_Duplicates")) File.Delete(targetUrl + "_Duplicates");
         }
 
         private bool InitRead(string OrigionalFileUrl, string TargetFileUrl)
@@ -117,15 +120,30 @@ namespace Straetusshockomatconverter
                 return false;
 
             newFileData = new List<string>();
+            newFileDataDuplicates = new List<string>();
 
             return true;
         }
 
+        private void SeperateFileDictionaryToLists()
+        {
+            var newFileParts = LineDictionary.Where(x => x.Value.Count == 1).Select(x => x.Value).ToList();
+            foreach (var part in newFileParts.SelectMany(newFilePart => newFilePart))
+            {
+                newFileData.Add(part);
+            }
+            var newFileDuplicatesParts = LineDictionary.Where(x => x.Value.Count > 1).Select(x => x.Value).ToList();
+            foreach (var part in newFileDuplicatesParts.SelectMany(newFileDuplicatePart => newFileDuplicatePart))
+            {
+                newFileDataDuplicates.Add(part);
+            }
+        }
+
         private void Parse()
         {
+            LineDictionary = new Dictionary<int, List<string>>();
             numberOfZeroSerialsDeleted = 0;
             numberOfCityNamesUpdated = 0;
-            SerialNumCount = new Dictionary<int, int>();
             string line;
             while ((line = _reader.ReadLine()) != null)
             {
@@ -144,21 +162,10 @@ namespace Straetusshockomatconverter
                 int serialNum;
                 var isNum = int.TryParse(parts[15], out serialNum);
 
-                if (isNum)
+                if (isNum && serialNum == 0)
                 {
-                    if (serialNum == 0)
-                    {
-                        numberOfZeroSerialsDeleted++;
-                        continue;
-                    }
-                    if (!SerialNumCount.ContainsKey(serialNum))
-                    {
-                        SerialNumCount.Add(serialNum, 1);
-                    }
-                    else
-                    {
-                        SerialNumCount[serialNum]++;
-                    }
+                    numberOfZeroSerialsDeleted++;
+                    continue;
                 }
 
                 if (parts[8] == null || parts[8] == string.Empty)
@@ -176,7 +183,14 @@ namespace Straetusshockomatconverter
                     parts[14] = _conversionTable[unconvertedValue];
                 }
 
-                newFileData.Add(string.Join(",", parts));
+                if (LineDictionary.ContainsKey(serialNum))
+                {
+                    LineDictionary[serialNum].Add(string.Join(",", parts));
+                }
+                else
+                {
+                    LineDictionary.Add(serialNum, new List<string> { string.Join(",", parts) });
+                }
             }
         }
 
@@ -200,9 +214,9 @@ namespace Straetusshockomatconverter
             }
         }
 
-        private void writeToFile()
+        private void WriteToFile(IEnumerable<string> data)
         {
-            foreach (var line in newFileData)
+            foreach (var line in data)
                 _writer.WriteLine(line);
         }
 
