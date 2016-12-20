@@ -145,6 +145,7 @@ namespace Straetusshockomatconverter
             numberOfCityNamesUpdated = 0;
             numberOfAddressNamesUpdated = 0;
             numberOfMikudsUpdated = 0;
+            var firstLine = true;
             string line;
             while ((line = _reader.ReadLine()) != null)
             {
@@ -152,6 +153,12 @@ namespace Straetusshockomatconverter
                 for (var i = 0; i < 20; i++)
                 {
                     parts.Add(LineSplitter(line).ElementAt(i));
+                }
+                if (firstLine)
+                {
+                    LineDictionary.Add(000000000000, new List<string> { string.Join(",", parts) });
+                    firstLine = false;
+                    continue;
                 }
 
                 if (parts[15] == null || parts[15] == string.Empty)
