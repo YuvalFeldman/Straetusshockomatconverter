@@ -13,7 +13,6 @@ namespace Straetusshockomatconverter
     {
         private StreamReader _reader;
         private StreamWriter _writer;
-
         private List<string> newFileData;
         private List<string> newFileDataDuplicates;
 
@@ -29,6 +28,8 @@ namespace Straetusshockomatconverter
 
         private int numberOfZeroSerialsDeleted;
         private int numberOfCityNamesUpdated;
+        private int numberOfAddressNamesUpdated;
+        private int numberOfMikudsUpdated;
 
         public void SingleParse(List<string> originUrl, List<string> targetUrl, Dictionary<string, string> configDictionary, string dateText, bool dateFilterCheckbox)
         {
@@ -59,7 +60,7 @@ namespace Straetusshockomatconverter
                 FileStream fileStream = new FileStream(targetUrl[i], FileMode.CreateNew);
                 using (_writer = new StreamWriter(fileStream, Encoding.GetEncoding("windows-1255")))
                 {
-                    WriteToFile(newFileData);
+                    WriteToFile(newFileData, string.Empty);
                 }
                 if (newFileDataDuplicates.Count > 0)
                 {
@@ -67,7 +68,7 @@ namespace Straetusshockomatconverter
                     fileStream = new FileStream(duplicatesFileName, FileMode.CreateNew);
                     using (_writer = new StreamWriter(fileStream, Encoding.GetEncoding("windows-1255")))
                     {
-                        WriteToFile(newFileDataDuplicates);
+                        WriteToFile(newFileDataDuplicates, newFileData[0]);
                     }
                 }
 
@@ -77,9 +78,7 @@ namespace Straetusshockomatconverter
             var duplicates = newFileDataDuplicates.Count > 0 ? "\r\n Duplicates where found, Duplicates file was created." : string.Empty;
 
             MessageBox.Show(
-                String.Format(
-                    "done {0} \r\n Number of city names changed: {1} \r\n Number of rows with zero or no serial deleted: {2} \r\n",
-                    duplicates, numberOfCityNamesUpdated, numberOfZeroSerialsDeleted));
+                $"done {duplicates} \r\n Number of city names changed: {numberOfCityNamesUpdated} \r\n Number of Addresses changed: {numberOfAddressNamesUpdated} \r\n Number of zip codes changed: {numberOfMikudsUpdated} \r\n Number of rows with zero or no serial deleted: {numberOfZeroSerialsDeleted} \r\n");
         }
 
         private bool DateTimeParse(string dateText, bool dateFilterCheckbox)
@@ -144,6 +143,8 @@ namespace Straetusshockomatconverter
             LineDictionary = new Dictionary<int, List<string>>();
             numberOfZeroSerialsDeleted = 0;
             numberOfCityNamesUpdated = 0;
+            numberOfAddressNamesUpdated = 0;
+            numberOfMikudsUpdated = 0;
             string line;
             while ((line = _reader.ReadLine()) != null)
             {
@@ -168,6 +169,19 @@ namespace Straetusshockomatconverter
                     continue;
                 }
 
+                if (parts[6] == null || parts[6] == string.Empty)
+                {
+                    numberOfAddressNamesUpdated++;
+                    parts[6] = "מען";
+                }
+                int mikud;
+                var mikudIsNum = int.TryParse(parts[7], out mikud);
+
+                if (parts[7] == null || parts[7] == string.Empty || !mikudIsNum || parts[7].Length != 5)
+                {
+                    numberOfMikudsUpdated++;
+                    parts[7] = "11111";
+                }
                 if (parts[8] == null || parts[8] == string.Empty)
                 {
                     numberOfCityNamesUpdated++;
@@ -214,8 +228,12 @@ namespace Straetusshockomatconverter
             }
         }
 
-        private void WriteToFile(IEnumerable<string> data)
+        private void WriteToFile(IEnumerable<string> data, string extraContentToWriteFirst)
         {
+            if (!string.IsNullOrEmpty(extraContentToWriteFirst))
+            {
+                _writer.WriteLine(extraContentToWriteFirst);
+            }
             foreach (var line in data)
                 _writer.WriteLine(line);
         }
