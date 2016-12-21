@@ -179,12 +179,12 @@ namespace Straetusshockomatconverter
                 if (parts[16].Contains('-'))
                 {
                     parts[16] = parts[16].Replace("-", "");
-                    parts[16] = $"\"-{parts[16]}\"";
+                    parts[16] = $"-{parts[16]}";
                 }
                 if (parts[19].Contains('-'))
                 {
                     parts[19] = parts[19].Replace("-", "");
-                    parts[18] = $"\"-{parts[18]}\"";
+                    parts[18] = $"-{parts[18]}";
                 }
 
                 if (parts[6] == null || parts[6] == string.Empty)
