@@ -13,8 +13,9 @@ namespace Straetusshockomatconverter
     {
         private StreamReader _reader;
         private StreamWriter _writer;
-        private List<string> newFileData;
-        private List<string> newFileDataDuplicates;
+        private List<string> _newFileData;
+        private List<string> _newFileDataDuplicates;
+        private List<string> _newFileDept;
 
         private TextFieldParser _csvParser;
 
@@ -24,7 +25,8 @@ namespace Straetusshockomatconverter
 
         private Dictionary<string, string> _conversionTable;
 
-        private Dictionary<int, List<string>> LineDictionary;
+        private Dictionary<int, List<string>> _lineDictionary;
+        private Dictionary<string, int> _deptDictionary; 
 
         private int numberOfZeroSerialsDeleted;
         private int numberOfCityNamesUpdated;
@@ -60,25 +62,51 @@ namespace Straetusshockomatconverter
                 FileStream fileStream = new FileStream(targetUrl[i], FileMode.CreateNew);
                 using (_writer = new StreamWriter(fileStream, Encoding.GetEncoding("windows-1255")))
                 {
-                    WriteToFile(newFileData, string.Empty);
+                    WriteToFile(_newFileData, string.Empty);
                 }
-                if (newFileDataDuplicates.Count > 0)
+                if (_newFileDataDuplicates.Count > 0)
                 {
                     var duplicatesFileName = targetUrl[i].Replace(".csv", "_Duplicate.csv");
                     fileStream = new FileStream(duplicatesFileName, FileMode.CreateNew);
                     using (_writer = new StreamWriter(fileStream, Encoding.GetEncoding("windows-1255")))
                     {
-                        WriteToFile(newFileDataDuplicates, newFileData[0]);
+                        WriteToFile(_newFileDataDuplicates, _newFileData[0]);
+                    }
+                }
+                var minusDept = _deptDictionary.Where(x => x.Value < 0);
+                foreach (var pair in minusDept)
+                {
+                    _newFileDept.Add(String.Join(",", pair.Key, pair.Value.ToString()));
+                }
+                if (_newFileDept.Count > 0)
+                {
+                    var deptFileName = targetUrl[i].Replace(".csv", "_Dept.csv");
+                    fileStream = new FileStream(deptFileName, FileMode.CreateNew);
+                    using (_writer = new StreamWriter(fileStream, Encoding.GetEncoding("windows-1255")))
+                    {
+                        var deptFileHeader = "Name, Dept";
+                        WriteToFile(_newFileDept, deptFileHeader);
                     }
                 }
 
                 Quit();
             }
 
-            var duplicates = newFileDataDuplicates.Count > 0 ? "\r\n Duplicates where found, Duplicates file was created." : string.Empty;
+            var duplicates = _newFileDataDuplicates.Count > 0 ? "\r\n Duplicates where found, Duplicates file was created." : string.Empty;
+            var customersWithDebts = _newFileDept.Count > 0 ? "\r\n People with debt where found, Dept file was created." : string.Empty;
+            var cityNamesChanged = numberOfCityNamesUpdated > 0 ?
+                string.Format("\r\n Number of city names changed: {0}", numberOfCityNamesUpdated)
+                : string.Empty;
+            var zipCodesChanged = numberOfMikudsUpdated > 0 ?
+                string.Format("\r\n Number of zip codes changed: {0}", numberOfMikudsUpdated)
+                : string.Empty;
+            var rowsDeleted = numberOfZeroSerialsDeleted > 0 ?
+                string.Format("\r\n Number of rows with zero or no serial deleted: {0}", numberOfZeroSerialsDeleted)
+                : string.Empty;
 
             MessageBox.Show(
-                $"done {duplicates} \r\n Number of city names changed: {numberOfCityNamesUpdated} \r\n Number of Addresses changed: {numberOfAddressNamesUpdated} \r\n Number of zip codes changed: {numberOfMikudsUpdated} \r\n Number of rows with zero or no serial deleted: {numberOfZeroSerialsDeleted} \r\n");
+                string.Format("done {0}{1}{2}{3}{4}", customersWithDebts, duplicates, cityNamesChanged, zipCodesChanged,
+                    rowsDeleted));
         }
 
         private bool DateTimeParse(string dateText, bool dateFilterCheckbox)
@@ -118,29 +146,31 @@ namespace Straetusshockomatconverter
             if (OrigionalFileUrl == null || TargetFileUrl == null)
                 return false;
 
-            newFileData = new List<string>();
-            newFileDataDuplicates = new List<string>();
+            _newFileData = new List<string>();
+            _newFileDataDuplicates = new List<string>();
+            _newFileDept = new List<string>();
 
             return true;
         }
 
         private void SeperateFileDictionaryToLists()
         {
-            var newFileParts = LineDictionary.Where(x => x.Value.Count == 1).Select(x => x.Value).ToList();
+            var newFileParts = _lineDictionary.Where(x => x.Value.Count == 1).Select(x => x.Value).ToList();
             foreach (var part in newFileParts.SelectMany(newFilePart => newFilePart))
             {
-                newFileData.Add(part);
+                _newFileData.Add(part);
             }
-            var newFileDuplicatesParts = LineDictionary.Where(x => x.Value.Count > 1).Select(x => x.Value).ToList();
+            var newFileDuplicatesParts = _lineDictionary.Where(x => x.Value.Count > 1).Select(x => x.Value).ToList();
             foreach (var part in newFileDuplicatesParts.SelectMany(newFileDuplicatePart => newFileDuplicatePart))
             {
-                newFileDataDuplicates.Add(part);
+                _newFileDataDuplicates.Add(part);
             }
         }
 
         private void Parse()
         {
-            LineDictionary = new Dictionary<int, List<string>>();
+            _lineDictionary = new Dictionary<int, List<string>>();
+            _deptDictionary = new Dictionary<string, int>();
             numberOfZeroSerialsDeleted = 0;
             numberOfCityNamesUpdated = 0;
             numberOfAddressNamesUpdated = 0;
@@ -156,7 +186,7 @@ namespace Straetusshockomatconverter
                 }
                 if (firstLine)
                 {
-                    LineDictionary.Add(000000000000, new List<string> { string.Join(",", parts) });
+                    _lineDictionary.Add(000000000000, new List<string> { string.Join(",", parts) });
                     firstLine = false;
                     continue;
                 }
@@ -179,12 +209,12 @@ namespace Straetusshockomatconverter
                 if (parts[16].Contains('-'))
                 {
                     parts[16] = parts[16].Replace("-", "");
-                    parts[16] = $"-{parts[16]}";
+                    parts[16] = String.Format("-{0}", parts[16]);
                 }
                 if (parts[19].Contains('-'))
                 {
                     parts[19] = parts[19].Replace("-", "");
-                    parts[18] = $"-{parts[18]}";
+                    parts[18] = String.Format("-{0}", parts[18]);
                 }
 
                 if (parts[6] == null || parts[6] == string.Empty)
@@ -215,13 +245,24 @@ namespace Straetusshockomatconverter
                     parts[14] = _conversionTable[unconvertedValue];
                 }
 
-                if (LineDictionary.ContainsKey(serialNum))
+                if (_lineDictionary.ContainsKey(serialNum))
                 {
-                    LineDictionary[serialNum].Add(string.Join(",", parts));
+                    _lineDictionary[serialNum].Add(string.Join(",", parts));
                 }
                 else
                 {
-                    LineDictionary.Add(serialNum, new List<string> { string.Join(",", parts) });
+                    _lineDictionary.Add(serialNum, new List<string> { string.Join(",", parts) });
+                }
+                int dept;
+                var isInt = int.TryParse(parts[16], out dept);
+
+                if (_deptDictionary.ContainsKey(parts[1]) && isInt)
+                {
+                    _deptDictionary[parts[1]] += dept;
+                }
+                else if (isInt)
+                {
+                    _deptDictionary.Add(parts[1], dept);
                 }
             }
         }
@@ -280,6 +321,5 @@ namespace Straetusshockomatconverter
                 }
             }
         }
-
     }
 }
