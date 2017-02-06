@@ -254,7 +254,7 @@ namespace Straetusshockomatconverter
                     _lineDictionary.Add(serialNum, new List<string> { string.Join(",", parts) });
                 }
                 int dept;
-                var isInt = int.TryParse(parts[16], out dept);
+                var isInt = int.TryParse(parts[18], out dept);
 
                 if (_deptDictionary.ContainsKey(parts[3]) && isInt)
                 {
