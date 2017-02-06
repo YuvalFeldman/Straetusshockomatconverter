@@ -64,16 +64,16 @@ namespace Straetusshockomatconverter
                 {
                     WriteToFile(_newFileData, string.Empty);
                 }
-                if (_newFileDataDuplicates.Count > 0)
-                {
-                    var duplicatesFileName = targetUrl[i].Replace(".csv", "_Duplicate.csv");
-                    fileStream = new FileStream(duplicatesFileName, FileMode.CreateNew);
-                    using (_writer = new StreamWriter(fileStream, Encoding.GetEncoding("windows-1255")))
-                    {
-                        WriteToFile(_newFileDataDuplicates, _newFileData[0]);
-                    }
-                }
-                var minusDept = _deptDictionary.Where(x => x.Value < 0);
+                //if (_newFileDataDuplicates.Count > 0)
+                //{
+                //    var duplicatesFileName = targetUrl[i].Replace(".csv", "_Duplicate.csv");
+                //    fileStream = new FileStream(duplicatesFileName, FileMode.CreateNew);
+                //    using (_writer = new StreamWriter(fileStream, Encoding.GetEncoding("windows-1255")))
+                //    {
+                //        WriteToFile(_newFileDataDuplicates, _newFileData[0]);
+                //    }
+                //}
+                var minusDept = _deptDictionary.Where(x => x.Value <= 0);
                 foreach (var pair in minusDept)
                 {
                     _newFileDept.Add(String.Join(",", pair.Key, pair.Value.ToString()));
@@ -92,7 +92,7 @@ namespace Straetusshockomatconverter
                 Quit();
             }
 
-            var duplicates = _newFileDataDuplicates.Count > 0 ? "\r\n Duplicates where found, Duplicates file was created." : string.Empty;
+            //var duplicates = _newFileDataDuplicates.Count > 0 ? "\r\n Duplicates where found, Duplicates file was created." : string.Empty;
             var customersWithDebts = _newFileDept.Count > 0 ? "\r\n People with debt where found, Dept file was created." : string.Empty;
             var cityNamesChanged = numberOfCityNamesUpdated > 0 ?
                 string.Format("\r\n Number of city names changed: {0}", numberOfCityNamesUpdated)
@@ -105,7 +105,7 @@ namespace Straetusshockomatconverter
                 : string.Empty;
 
             MessageBox.Show(
-                string.Format("done {0}{1}{2}{3}{4}", customersWithDebts, duplicates, cityNamesChanged, zipCodesChanged,
+                string.Format("done {0}{1}{2}{3}", customersWithDebts, cityNamesChanged, zipCodesChanged,
                     rowsDeleted));
         }
 
@@ -256,13 +256,13 @@ namespace Straetusshockomatconverter
                 int dept;
                 var isInt = int.TryParse(parts[16], out dept);
 
-                if (_deptDictionary.ContainsKey(parts[1]) && isInt)
+                if (_deptDictionary.ContainsKey(parts[3]) && isInt)
                 {
-                    _deptDictionary[parts[1]] += dept;
+                    _deptDictionary[parts[3]] += dept;
                 }
                 else if (isInt)
                 {
-                    _deptDictionary.Add(parts[1], dept);
+                    _deptDictionary.Add(parts[3], dept);
                 }
             }
         }
