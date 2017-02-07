@@ -25,7 +25,7 @@ namespace Straetusshockomatconverter
 
         private Dictionary<string, string> _conversionTable;
 
-        private Dictionary<int, List<string>> _lineDictionary;
+        private List<string> _lineDictionary;
         private Dictionary<string, int> _deptDictionary; 
 
         private int numberOfZeroSerialsDeleted;
@@ -155,21 +155,25 @@ namespace Straetusshockomatconverter
 
         private void SeperateFileDictionaryToLists()
         {
-            var newFileParts = _lineDictionary.Where(x => x.Value.Count == 1).Select(x => x.Value).ToList();
-            foreach (var part in newFileParts.SelectMany(newFilePart => newFilePart))
+            foreach (var line in _lineDictionary)
             {
-                _newFileData.Add(part);
+                _newFileData.Add(line);
             }
-            var newFileDuplicatesParts = _lineDictionary.Where(x => x.Value.Count > 1).Select(x => x.Value).ToList();
-            foreach (var part in newFileDuplicatesParts.SelectMany(newFileDuplicatePart => newFileDuplicatePart))
-            {
-                _newFileDataDuplicates.Add(part);
-            }
+            //var newFileParts = _lineDictionary.Where(x => x.Value.Count == 1).Select(x => x.Value).ToList();
+            //foreach (var part in newFileParts.SelectMany(newFilePart => newFilePart))
+            //{
+            //    _newFileData.Add(part);
+            //}
+            //var newFileDuplicatesParts = _lineDictionary.Where(x => x.Value.Count > 1).Select(x => x.Value).ToList();
+            //foreach (var part in newFileDuplicatesParts.SelectMany(newFileDuplicatePart => newFileDuplicatePart))
+            //{
+            //    _newFileDataDuplicates.Add(part);
+            //}
         }
 
         private void Parse()
         {
-            _lineDictionary = new Dictionary<int, List<string>>();
+            _lineDictionary = new List<string>();
             _deptDictionary = new Dictionary<string, int>();
             numberOfZeroSerialsDeleted = 0;
             numberOfCityNamesUpdated = 0;
@@ -186,7 +190,7 @@ namespace Straetusshockomatconverter
                 }
                 if (firstLine)
                 {
-                    _lineDictionary.Add(000000000000, new List<string> { string.Join(",", parts) });
+                    _lineDictionary.Add(string.Join(",", parts));
                     firstLine = false;
                     continue;
                 }
@@ -245,14 +249,8 @@ namespace Straetusshockomatconverter
                     parts[14] = _conversionTable[unconvertedValue];
                 }
 
-                if (_lineDictionary.ContainsKey(serialNum))
-                {
-                    _lineDictionary[serialNum].Add(string.Join(",", parts));
-                }
-                else
-                {
-                    _lineDictionary.Add(serialNum, new List<string> { string.Join(",", parts) });
-                }
+                _lineDictionary.Add(string.Join(",", parts));
+
                 int dept;
                 var isInt = int.TryParse(parts[18], out dept);
 
