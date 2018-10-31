@@ -242,6 +242,7 @@ namespace Straetusshockomatconverter
                 DateTime currentLinesDate;
                 var successfullParse = DateTime.TryParse(parts[19], out currentLinesDate);
                 if (successfullParse && currentLinesDate < _date) continue;
+                parts[19] = currentLinesDate.ToString("dd-MM-yyyy");
 
                 var unconvertedValue = parts[14].Trim();
                 if (_conversionTable.ContainsKey(unconvertedValue))
